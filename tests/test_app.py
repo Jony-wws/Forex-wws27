@@ -258,6 +258,46 @@ def test_refresh_dedupes_optimistic_user_message(monkeypatch):
     assert len(assistant_msgs) == 1
 
 
+def test_refresh_dedupes_when_devin_prefixes_model_hint(monkeypatch):
+    """Local row has the bare prompt; Devin echoes it with a model-hint
+    prefix. Adoption must still happen so we don't render the user bubble
+    twice."""
+    c = _client()
+    _login(c)
+    c.post("/api/accounts", json={"label": "m", "api_key": "apk_user_x"})
+
+    async def fake_create_session(self, prompt, *, title=None, **kwargs):  # noqa: ANN001
+        return {"session_id": "devin-y", "url": "https://example/y"}
+
+    async def fake_get_session(self, session_id):  # noqa: ANN001
+        return {
+            "session_id": "devin-y",
+            "status_enum": "working",
+            "messages": [
+                {
+                    "type": "initial_user_message",
+                    "event_id": "ev-user-1",
+                    "message": (
+                        "[Site preference: prefer the **claude-sonnet-4.5** model "
+                        "where possible. This is a hint, not a hard constraint.]\n\n"
+                        "hello there"
+                    ),
+                },
+            ],
+        }
+
+    monkeypatch.setattr("app.devin_client.DevinClient.create_session", fake_create_session)
+    monkeypatch.setattr("app.devin_client.DevinClient.get_session", fake_get_session)
+
+    chat = c.post(
+        "/api/chats",
+        json={"message": "hello there", "model_hint": "claude-sonnet-4.5"},
+    ).json()
+    refreshed = c.post(f"/api/chats/{chat['id']}/refresh").json()
+    user_msgs = [m for m in refreshed["messages"] if m["role"] == "user"]
+    assert len(user_msgs) == 1, refreshed["messages"]
+
+
 def test_send_message_devin_502_propagates(monkeypatch):
     c = _client()
     _login(c)

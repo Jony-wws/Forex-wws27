@@ -64,8 +64,18 @@ def upsert_messages_from_session(
     )
 
     def _adopt_local(role: str, content: str) -> Message | None:
+        target = content.strip()
         for m in pending_unmatched:
-            if m.role == role and (m.content or "").strip() == content.strip():
+            if m.role != role:
+                continue
+            local = (m.content or "").strip()
+            if not local:
+                continue
+            # Exact match, or Devin echoed the same message wrapped in
+            # site-added metadata (e.g. a model-hint prefix or an attachment
+            # suffix). Adopt in any of those cases instead of inserting a
+            # duplicate user bubble.
+            if local == target or local in target:
                 pending_unmatched.remove(m)
                 return m
         return None
