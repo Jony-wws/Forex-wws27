@@ -1,0 +1,43 @@
+# Fly.io config for Devin Chat Aggregator
+# Replace ${APP_NAME} with a unique app name when running `fly launch` or
+# `fly deploy --app <name>`.
+
+app = "devin-chat-aggregator"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DATA_DIR = "/data"
+
+# 3 GB volume on the free tier — plenty for chat history.
+[[mounts]]
+  source = "dca_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 30
+    hard_limit = 60
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
