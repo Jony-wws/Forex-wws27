@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -11,7 +12,9 @@ class Settings(BaseSettings):
 
     site_password: str = "change-me"
     secret_key: str = "dev-secret-replace-me-please-its-long-enough-32-bytes"
-    data_dir: str = "./data"
+    # Prefer /data if it exists and is writable (Fly.io / Docker pattern),
+    # otherwise fall back to a local ./data directory for development.
+    data_dir: str = "/data" if Path("/data").is_dir() and os.access("/data", os.W_OK) else "./data"
     devin_api_base: str = "https://api.devin.ai"
 
     github_token: str = ""

@@ -220,6 +220,44 @@ def test_render_chat_markdown(tmp_path, monkeypatch):
     assert "hello back" in md
 
 
+def test_refresh_dedupes_optimistic_user_message(monkeypatch):
+    """Locally-saved user message (no event_id) gets adopted, not duplicated."""
+    c = _client()
+    _login(c)
+    c.post("/api/accounts", json={"label": "m", "api_key": "apk_user_x"})
+
+    async def fake_create_session(self, prompt, *, title=None, **kwargs):  # noqa: ANN001
+        return {"session_id": "devin-x", "url": "https://example/x"}
+
+    async def fake_get_session(self, session_id):  # noqa: ANN001
+        return {
+            "session_id": "devin-x",
+            "status_enum": "blocked",
+            "messages": [
+                {
+                    "type": "initial_user_message",
+                    "event_id": "ev-user-1",
+                    "message": "hello there",
+                },
+                {
+                    "type": "devin_message",
+                    "event_id": "ev-devin-1",
+                    "message": "Hi",
+                },
+            ],
+        }
+
+    monkeypatch.setattr("app.devin_client.DevinClient.create_session", fake_create_session)
+    monkeypatch.setattr("app.devin_client.DevinClient.get_session", fake_get_session)
+
+    chat = c.post("/api/chats", json={"message": "hello there"}).json()
+    refreshed = c.post(f"/api/chats/{chat['id']}/refresh").json()
+    user_msgs = [m for m in refreshed["messages"] if m["role"] == "user"]
+    assert len(user_msgs) == 1, refreshed["messages"]
+    assistant_msgs = [m for m in refreshed["messages"] if m["role"] == "assistant"]
+    assert len(assistant_msgs) == 1
+
+
 def test_send_message_devin_502_propagates(monkeypatch):
     c = _client()
     _login(c)

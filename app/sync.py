@@ -50,6 +50,26 @@ def upsert_messages_from_session(
         ).all()
     }
 
+    # Local rows that were saved optimistically (no event_id yet). On the next
+    # refresh, when Devin returns the same message with an event_id, we adopt
+    # that id onto the local row instead of inserting a duplicate.
+    pending_unmatched: list[Message] = list(
+        db.execute(
+            select(Message)
+            .where(Message.chat_id == chat.id, Message.devin_event_id.is_(None))
+            .order_by(Message.id.asc())
+        )
+        .scalars()
+        .all()
+    )
+
+    def _adopt_local(role: str, content: str) -> Message | None:
+        for m in pending_unmatched:
+            if m.role == role and (m.content or "").strip() == content.strip():
+                pending_unmatched.remove(m)
+                return m
+        return None
+
     inserted = 0
     for ev in events:
         if not isinstance(ev, dict):
@@ -65,6 +85,15 @@ def upsert_messages_from_session(
                 content = json.dumps(content, ensure_ascii=False)
             except Exception:
                 content = str(content)
+
+        adopted = _adopt_local(role, content) if role == "user" else None
+        if adopted is not None:
+            adopted.devin_event_id = event_id
+            adopted.devin_event_type = event_type
+            adopted.raw_json = json.dumps(ev, ensure_ascii=False)
+            if event_id:
+                existing_event_ids.add(event_id)
+            continue
 
         msg = Message(
             chat_id=chat.id,
