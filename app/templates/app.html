@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Devin Chat Aggregator</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <header class="sidebar-header">
+        <div class="brand">
+          <span class="dot"></span> Devin Chat
+        </div>
+        <button id="new-chat-btn" class="primary" title="New chat">+ New chat</button>
+      </header>
+      <div id="chat-list" class="chat-list" aria-label="Chats"></div>
+      <footer class="sidebar-footer">
+        <button id="settings-btn" class="ghost">Settings</button>
+        <form method="post" action="/logout"><button type="submit" class="ghost">Logout</button></form>
+      </footer>
+    </aside>
+
+    <section class="main">
+      <header class="main-header">
+        <div class="title">
+          <h2 id="chat-title">No chat selected</h2>
+          <div class="meta" id="chat-meta"></div>
+        </div>
+        <div class="actions">
+          <a id="open-in-devin" class="ghost" target="_blank" rel="noopener" hidden>Open in Devin</a>
+          <button id="refresh-btn" class="ghost" disabled>Refresh</button>
+          <button id="export-btn" class="ghost" disabled>Export to GitHub</button>
+        </div>
+      </header>
+
+      <div id="messages" class="messages" aria-live="polite">
+        <div class="empty-state">
+          <h3>Welcome.</h3>
+          <p>Pick a chat on the left or start a new one. Everything you do here is stored in this site's database, so switching Devin accounts won't lose your history.</p>
+        </div>
+      </div>
+
+      <form id="composer" class="composer" autocomplete="off">
+        <div class="composer-row">
+          <select id="account-select" title="Devin account"></select>
+          <select id="model-select" title="Model hint">
+            <option value="">Default model</option>
+            <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
+            <option value="claude-opus-4">Claude Opus 4</option>
+            <option value="gpt-5">GPT-5</option>
+            <option value="gpt-4.1">GPT-4.1</option>
+            <option value="o3">OpenAI o3</option>
+          </select>
+          <span id="attachment-pill" class="pill" hidden></span>
+        </div>
+        <div class="composer-row">
+          <label for="file-input" class="file-btn" title="Attach file">📎</label>
+          <input id="file-input" type="file" accept="image/*,application/pdf,text/*,.zip,.json,.csv" hidden />
+          <textarea id="prompt" rows="3" placeholder="Send a message to Devin..." required></textarea>
+          <button id="send-btn" class="primary" type="submit">Send</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Settings modal -->
+    <div id="settings-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-close="settings-modal"></div>
+      <div class="modal-card">
+        <header><h3>Settings</h3><button class="ghost" data-close="settings-modal">×</button></header>
+        <section>
+          <h4>Devin accounts</h4>
+          <p class="muted">Add one row per Devin account. Get an API key at
+            <a href="https://app.devin.ai/settings/api-keys" target="_blank" rel="noopener">app.devin.ai/settings/api-keys</a>.
+          </p>
+          <div id="accounts-list"></div>
+          <form id="add-account-form" class="inline-form">
+            <input id="acc-label" type="text" placeholder="Label (e.g. work)" required />
+            <input id="acc-key" type="password" placeholder="apk_user_..." required />
+            <label class="check"><input id="acc-default" type="checkbox" /> default</label>
+            <button type="submit" class="primary">Add</button>
+          </form>
+        </section>
+        <section>
+          <h4>GitHub export</h4>
+          <p class="muted" id="gh-status"></p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Export modal -->
+    <div id="export-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-close="export-modal"></div>
+      <div class="modal-card">
+        <header><h3>Export to GitHub</h3><button class="ghost" data-close="export-modal">×</button></header>
+        <form id="export-form">
+          <label for="exp-repo">Repository (owner/repo)</label>
+          <input id="exp-repo" type="text" placeholder="leave blank to use default" />
+          <label for="exp-branch">Branch</label>
+          <input id="exp-branch" type="text" value="main" />
+          <label for="exp-path">Path (optional)</label>
+          <input id="exp-path" type="text" placeholder="chats/000001-title.md" />
+          <p id="export-msg" class="muted"></p>
+          <button type="submit" class="primary">Export</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
