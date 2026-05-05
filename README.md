@@ -1,2 +1,5 @@
-# Forex-wws27
-Forex Binary Options Analyzer
+# ⚠️ Этот репозиторий устарел
+
+Актуальная система находится здесь: **[Forex-wws2277](https://github.com/Jony-wws/Forex-wws2277)**
+
+Все данные перенесены. Этот репозиторий больше не используется.
